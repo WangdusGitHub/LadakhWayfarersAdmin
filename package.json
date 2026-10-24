@@ -1,0 +1,31 @@
+{
+  "name": "ladakh-wayfarers-admin",
+  "version": "1.0.0",
+  "description": "Production admin management console for Ladakh Wayfarers managing Tours, Reviews, Media Gallery, and Driver Fleet.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "ladakh",
+    "wayfarers",
+    "admin",
+    "tour-management",
+    "mongodb",
+    "cloudinary"
+  ],
+  "author": "Ladakh Wayfarers",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.11.2",
+    "multer": "^2.4.0"
+  }
+}

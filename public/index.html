@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ladakh Wayfarers — Admin Management Console</title>
+  <meta name="description" content="Manage Tours, Reviews, Gallery, and Driver Configuration with MongoDB and Cloudinary.">
+  
+  <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome / Icons via CDN for crisp UI icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Vanilla CSS -->
+  <link rel="stylesheet" href="css/styles.css?v=7">
+</head>
+<body class="dark-theme">
+  <!-- Mountain Twilight Ambient Glow -->
+  <div class="ambient-glow glow-top"></div>
+  <div class="ambient-glow glow-bottom"></div>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Himalayan Security Splash Preloader -->
+  <div id="auth-splash-screen" class="auth-splash-screen">
+    <div class="splash-card">
+      <div class="splash-logo">
+        <i class="fa-solid fa-mountain-sun"></i>
+      </div>
+      <h2 class="splash-brand">Ladakh Wayfarers</h2>
+      <p class="splash-subtitle">High-Altitude Expeditions & Fleet Control</p>
+      <div class="splash-loader">
+        <div class="splash-spinner-ring"></div>
+      </div>
+      <span class="splash-status-text" id="splash-status-text">Verifying admin session...</span>
+    </div>
+  </div>
+
+  <!-- Admin Login Screen (Displayed when not authenticated) -->
+  <div id="admin-login-screen" class="admin-login-screen hidden">
+    <div class="login-card-container">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-brand-icon">
+            <i class="fa-solid fa-mountain-sun"></i>
+          </div>
+          <h1 class="login-title">Ladakh Wayfarers</h1>
+          <div class="login-badge-pill">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Authorized Admin Portal</span>
+          </div>
+          <p class="login-desc">Sign in with administrator credentials to manage fleet expeditions, high-altitude tour itineraries, reviews, and gallery assets.</p>
+        </div>
+
+        <!-- Alert messages (Hidden by default, displayed dynamically on action) -->
+        <div id="login-error-alert" class="login-alert alert-danger hidden" role="alert" style="display: none;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="login-error-text"></span>
+        </div>
+        <div id="login-success-alert" class="login-alert alert-success hidden" role="alert" style="display: none;">
+          <i class="fa-solid fa-circle-check"></i>
+          <span id="login-success-text"></span>
+        </div>
+
+        <!-- Login Form -->
+        <form id="admin-login-form" class="login-form" novalidate>
+          <div class="form-group">
+            <label for="login-username"><i class="fa-solid fa-user-shield"></i> Admin Username or Email</label>
+            <input type="text" id="login-username" class="login-input" placeholder="admin or admin@ladakhwayfarers.com" required autocomplete="username" spellcheck="false" autofocus>
+          </div>
+
+          <div class="form-group">
+            <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="login-password" class="login-input" placeholder="Enter your admin password" required autocomplete="current-password">
+              <button type="button" class="btn-toggle-password" id="btn-toggle-login-pwd" title="Toggle password visibility" tabindex="-1">
+                <i class="fa-regular fa-eye" id="toggle-pwd-icon"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="remember-device-row">
+            <label class="custom-checkbox-label">
+              <input type="checkbox" id="login-remember-me" checked>
+              <span class="custom-checkbox-box"></span>
+              <span class="checkbox-text-group">
+                <span class="checkbox-primary-text">Remember on this device</span>
+                <span class="checkbox-subtext">Stay signed in so you don't need to log in every time</span>
+              </span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-login-submit" id="btn-login-submit">
+            <span class="btn-login-idle">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i>
+              <span>Sign In to Admin Console</span>
+            </span>
+            <span class="btn-login-busy hidden" style="display: none;">
+              <i class="fa-solid fa-circle-notch fa-spin"></i>
+              <span>Authenticating...</span>
+            </span>
+          </button>
+        </form>
+
+        <div class="login-footer-info">
+          <div class="security-chip">
+            <i class="fa-solid fa-shield-cat"></i>
+            <span>Secured with JWT Session Token & Bcrypt Hashing</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Wrapper -->
+  <div class="app-layout" id="app-layout" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="logo-icon">
+            <i class="fa-solid fa-mountain-sun"></i>
+          </div>
+          <div class="brand-info">
+            <h2 class="brand-name">Ladakh Wayfarers</h2>
+            <span class="brand-badge">Admin Console</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-section-label">CONTENT MANAGEMENT</div>
+        <button class="nav-item active" data-tab="tours" id="tab-btn-tours">
+          <i class="fa-solid fa-route"></i>
+          <span>Tour Packages</span>
+          <span class="count-pill" id="badge-tours-count">0</span>
+        </button>
+        <button class="nav-item" data-tab="reviews" id="tab-btn-reviews">
+          <i class="fa-solid fa-star-half-stroke"></i>
+          <span>Customer Reviews</span>
+          <span class="count-pill" id="badge-reviews-count">0</span>
+        </button>
+        <button class="nav-item" data-tab="gallery" id="tab-btn-gallery">
+          <i class="fa-solid fa-images"></i>
+          <span>Photo Gallery</span>
+          <span class="count-pill" id="badge-gallery-count">0</span>
+        </button>
+
+        <div class="nav-section-label">CONFIGURATION</div>
+        <button class="nav-item" data-tab="driver-config" id="tab-btn-config">
+          <i class="fa-solid fa-id-card"></i>
+          <span>Driver Profile</span>
+        </button>
+        <button class="nav-item" data-tab="system-status" id="tab-btn-status">
+          <i class="fa-solid fa-database"></i>
+          <span>Database & Cloudinary</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="driver-mini-card">
+          <div class="driver-avatar" id="sidebar-driver-avatar">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div class="driver-mini-info">
+            <strong id="sidebar-driver-name">Stanzin Jigmet</strong>
+            <span id="sidebar-driver-vehicle">Toyota Innova Crysta</span>
+            <span id="sidebar-admin-role">Super Admin</span>
+          </div>
+        </div>
+        <div class="sidebar-auth-actions">
+          <button type="button" class="btn-sidebar-auth" id="sidebar-btn-change-pwd" title="Change Admin Password">
+            <i class="fa-solid fa-key"></i>
+            <span>Change Password</span>
+          </button>
+          <button type="button" class="btn-sidebar-auth btn-sidebar-logout" id="sidebar-btn-logout" title="Sign out of Admin Console">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+        <div class="db-status-pill" id="sidebar-db-indicator">
+          <span class="status-dot"></span>
+          <span class="status-text">Checking Database...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle-btn" class="mobile-toggle-btn" title="Toggle Sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="page-title-block">
+            <h1 id="current-tab-title">Tour Packages Management</h1>
+            <p id="current-tab-subtitle">Create, update, and manage high-altitude itineraries for Ladakh Wayfarers</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- System Quick Pills -->
+          <div class="quick-pill-group">
+            <span class="system-pill" id="topbar-mongo-pill">
+              <i class="fa-solid fa-server"></i>
+              <span id="topbar-mongo-text">MongoDB: Checking...</span>
+            </span>
+            <span class="system-pill" id="topbar-cloud-pill">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span id="topbar-cloud-text">Cloudinary: Checking...</span>
+            </span>
+          </div>
+
+          <!-- Action Buttons -->
+          <button class="btn btn-secondary" id="btn-seed-data" title="Reset or populate database with sample Ladakh data">
+            <i class="fa-solid fa-seedling"></i>
+            <span>Seed Sample Data</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-export-json" title="Download backup of all collections">
+            <i class="fa-solid fa-file-export"></i>
+            <span>Export JSON</span>
+          </button>
+          <button class="btn btn-primary" id="btn-add-item">
+            <i class="fa-solid fa-plus"></i>
+            <span id="btn-add-item-text">Add Tour</span>
+          </button>
+
+          <!-- Topbar Admin Profile & Logout -->
+          <div class="topbar-admin-chip">
+            <div class="admin-chip-info">
+              <span id="topbar-admin-avatar" class="admin-chip-avatar"><i class="fa-solid fa-circle-user"></i></span>
+              <span id="topbar-admin-username">admin</span>
+            </div>
+            <button type="button" class="btn-chip-icon" id="topbar-btn-change-pwd" title="Change Password">
+              <i class="fa-solid fa-key"></i>
+            </button>
+            <button type="button" class="btn-chip-icon btn-chip-logout" id="topbar-btn-logout" title="Log Out">
+              <i class="fa-solid fa-power-off"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- View Container for Dynamic Tabs -->
+      <div class="content-body">
+        
+        <!-- ========================================== -->
+        <!-- TAB 1: TOURS SECTION -->
+        <!-- ========================================== -->
+        <section id="section-tours" class="tab-section active">
+          <!-- Filter / Search Toolbar -->
+          <div class="toolbar-card">
+            <div class="search-input-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="tours-search-input" placeholder="Search tours by title, pass name, or category...">
+            </div>
+            <div class="filters-wrap">
+              <select id="tours-difficulty-filter" class="filter-select">
+                <option value="all">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Challenging">Challenging</option>
+              </select>
+              <select id="tours-category-filter" class="filter-select">
+                <option value="all">All Categories</option>
+                <option value="Classic">Classic</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Cultural">Cultural</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tours Grid -->
+          <div class="grid-container" id="tours-grid">
+            <!-- Dynamic Tour Cards Rendered Here -->
+            <div class="loading-state">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <p>Loading tour packages...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: REVIEWS SECTION -->
+        <!-- ========================================== -->
+        <section id="section-reviews" class="tab-section">
+          <!-- Filter / Search Toolbar -->
+          <div class="toolbar-card">
+            <div class="search-input-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="reviews-search-input" placeholder="Search reviews by traveler name, location, or feedback...">
+            </div>
+            <div class="filters-wrap">
+              <select id="reviews-rating-filter" class="filter-select">
+                <option value="all">All Ratings (1 - 5 ⭐)</option>
+                <option value="5">5 Stars Only</option>
+                <option value="4">4 Stars & Above</option>
+              </select>
+              <select id="reviews-verified-filter" class="filter-select">
+                <option value="all">All Verification Status</option>
+                <option value="verified">Verified Travelers Only</option>
+                <option value="unverified">Unverified Only</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Reviews Grid -->
+          <div class="grid-container" id="reviews-grid">
+            <!-- Dynamic Review Cards Rendered Here -->
+            <div class="loading-state">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <p>Loading customer reviews...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: GALLERY SECTION -->
+        <!-- ========================================== -->
+        <section id="section-gallery" class="tab-section">
+          <!-- Filter / Search Toolbar -->
+          <div class="toolbar-card">
+            <div class="category-pills" id="gallery-category-pills">
+              <button class="pill-btn active" data-category="all">All Media</button>
+              <button class="pill-btn" data-category="videos"><i class="fa-solid fa-video"></i> Videos & Reels</button>
+              <button class="pill-btn" data-category="lakes">Lakes (Pangong/Tso Moriri)</button>
+              <button class="pill-btn" data-category="passes">High Passes (Khardung La)</button>
+              <button class="pill-btn" data-category="monasteries">Monasteries</button>
+              <button class="pill-btn" data-category="vehicles">Vehicles & Expeditions</button>
+              <button class="pill-btn" data-category="culture">Culture & People</button>
+            </div>
+            <div class="search-input-wrap gallery-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="gallery-search-input" placeholder="Search photos and videos...">
+            </div>
+          </div>
+
+          <!-- Gallery Upload Banner -->
+          <div class="upload-banner-card" id="gallery-quick-upload-zone">
+            <div class="upload-icon-circle">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <div class="upload-banner-text">
+              <h4>Direct Cloudinary Media Uploader (Images & Videos)</h4>
+              <p>Drop high-res photos or videos (MP4, MOV, WEBM up to 100MB) to auto-host on Cloudinary Cloud CDN</p>
+            </div>
+            <button class="btn btn-primary" id="btn-trigger-gallery-modal">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span>Upload Photo / Video</span>
+            </button>
+          </div>
+
+          <!-- Gallery Grid -->
+          <div class="gallery-masonry" id="gallery-grid">
+            <!-- Dynamic Gallery Cards Rendered Here -->
+            <div class="loading-state">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <p>Loading photo gallery...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: DRIVER CONFIG SECTION -->
+        <!-- ========================================== -->
+        <section id="section-driver-config" class="tab-section">
+          <div class="config-container">
+            <form id="driver-config-form" class="config-form-card">
+              <div class="config-card-header">
+                <div>
+                  <h3>Driver & Chauffeur Profile</h3>
+                  <p>Update chauffeur credentials, contact information, and safety amenities</p>
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-save-driver-config">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                  <span>Save Config Changes</span>
+                </button>
+              </div>
+
+              <!-- Profile Picture Upload Section -->
+              <div class="profile-upload-section">
+                <div class="profile-avatar-column">
+                  <div class="profile-avatar-wrapper" id="driver-avatar-wrapper" role="button" tabindex="0" title="Click or drop file to change profile picture">
+                    <img id="driver-avatar-img" src="" alt="Driver Profile Picture" style="display: none;">
+                    <div id="driver-avatar-placeholder" class="driver-avatar-placeholder">
+                      <i class="fa-solid fa-user-tie"></i>
+                      <span>No Photo</span>
+                    </div>
+                    <div class="avatar-hover-overlay" id="avatar-hover-overlay">
+                      <i class="fa-solid fa-camera"></i>
+                      <span>Change</span>
+                    </div>
+                  </div>
+                  <div class="profile-avatar-badge" id="driver-avatar-badge">
+                    <span class="status-dot"></span>
+                    <span id="driver-avatar-badge-text">Default Avatar</span>
+                  </div>
+                </div>
+
+                <div class="profile-upload-body">
+                  <div class="profile-upload-heading">
+                    <h4>Chauffeur & Driver Profile Picture</h4>
+                    <p>Add, update, or delete your portrait photo anytime. This picture is displayed on customer itineraries, direct quotes, and the admin console.</p>
+                  </div>
+
+                  <div class="profile-upload-actions">
+                    <input type="file" id="driver-profile-file-input" accept="image/png,image/jpeg,image/webp,image/gif" class="file-hidden-input">
+                    <button type="button" class="btn btn-primary" id="btn-upload-driver-photo">
+                      <i class="fa-solid fa-cloud-arrow-up"></i>
+                      <span id="btn-upload-driver-photo-text">Upload Picture</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="btn-toggle-profile-url">
+                      <i class="fa-solid fa-link"></i>
+                      <span>Image URL</span>
+                    </button>
+                    <button type="button" class="btn btn-danger" id="btn-delete-driver-photo" style="display: none;">
+                      <i class="fa-solid fa-trash-can"></i>
+                      <span>Delete Picture</span>
+                    </button>
+                  </div>
+
+                  <!-- Direct URL Input Panel (Collapsible) -->
+                  <div class="profile-url-panel" id="profile-url-panel" style="display: none;">
+                    <div class="input-with-action">
+                      <input type="url" id="cfg-profileImage" name="profileImage" placeholder="https://res.cloudinary.com/... or https://images.unsplash.com/..." class="form-input">
+                      <button type="button" class="btn btn-secondary" id="btn-apply-profile-url">
+                        <i class="fa-solid fa-check"></i> Apply URL
+                      </button>
+                    </div>
+                    <span class="field-hint">Paste direct image URL from Cloudinary, Unsplash, or CDN.</span>
+                  </div>
+
+                  <!-- Hidden input for Cloudinary publicId -->
+                  <input type="hidden" id="cfg-profileImagePublicId" name="profileImagePublicId" value="">
+
+                  <!-- Upload Progress & Status Feedback -->
+                  <div class="profile-upload-progress" id="profile-upload-progress" style="display: none;">
+                    <div class="upload-progress-bar-wrap">
+                      <div class="upload-progress-bar" id="profile-upload-progress-fill"></div>
+                    </div>
+                    <div class="progress-info-row">
+                      <span id="profile-upload-status-text">Uploading to Cloudinary...</span>
+                      <span id="profile-upload-percent-text">0%</span>
+                    </div>
+                  </div>
+
+                  <!-- Drag & Drop Zone Hint -->
+                  <div class="profile-dropzone-hint" id="driver-avatar-dropzone">
+                    <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                    <span>Drag & drop photo here or browse (PNG, JPG, WEBP up to 10MB)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <!-- Driver Basic Info -->
+                <div class="form-group">
+                  <label for="cfg-driverName">Driver Name</label>
+                  <input type="text" id="cfg-driverName" name="driverName" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-brandName">Brand / Agency Name</label>
+                  <input type="text" id="cfg-brandName" name="brandName" required>
+                </div>
+
+                <div class="form-group form-col-span-2">
+                  <label for="cfg-tagline">Tagline / Mission</label>
+                  <input type="text" id="cfg-tagline" name="tagline">
+                </div>
+
+                <!-- Contact Info -->
+                <div class="form-group">
+                  <label for="cfg-phone">Phone Number (Display)</label>
+                  <input type="text" id="cfg-phone" name="phone">
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-whatsappNumber">WhatsApp Number (e.g. 919797887369)</label>
+                  <input type="text" id="cfg-whatsappNumber" name="whatsappNumber">
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-email">Email Address</label>
+                  <input type="email" id="cfg-email" name="email">
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-baseLocation">Base Operating Location</label>
+                  <input type="text" id="cfg-baseLocation" name="baseLocation">
+                </div>
+
+                <!-- Union & Vehicles -->
+                <div class="form-group form-col-span-2">
+                  <label for="cfg-taxiUnionReg">Taxi Union Registration Details</label>
+                  <input type="text" id="cfg-taxiUnionReg" name="taxiUnionReg">
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-primaryVehicle">Primary Expedition Vehicle</label>
+                  <input type="text" id="cfg-primaryVehicle" name="primaryVehicle">
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-secondaryVehicle">Secondary / Backup Vehicle</label>
+                  <input type="text" id="cfg-secondaryVehicle" name="secondaryVehicle">
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-drivingExperienceYears">Driving Experience</label>
+                  <input type="text" id="cfg-drivingExperienceYears" name="drivingExperienceYears">
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-safeExpeditionsCount">Safe Expeditions Count</label>
+                  <input type="text" id="cfg-safeExpeditionsCount" name="safeExpeditionsCount">
+                </div>
+
+                <!-- Safety Features Dynamic List -->
+                <div class="form-group form-col-span-2">
+                  <label>On-Board Safety & Emergency Equipment</label>
+                  <div id="safety-features-list" class="dynamic-tag-list"></div>
+                  <div class="add-tag-row">
+                    <input type="text" id="new-safety-feature-input" placeholder="e.g. Medical Grade Portable Oxygen Cylinder (O2) on-board">
+                    <button type="button" class="btn btn-secondary" id="btn-add-safety-feature">
+                      <i class="fa-solid fa-plus"></i> Add Feature
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: DATABASE & CLOUDINARY STATUS -->
+        <!-- ========================================== -->
+        <section id="section-system-status" class="tab-section">
+          <div class="system-status-container">
+            <!-- Mongo Status Card -->
+            <div class="status-card">
+              <div class="status-card-header">
+                <div class="status-icon-box mongo">
+                  <i class="fa-solid fa-database"></i>
+                </div>
+                <div>
+                  <h3>MongoDB Connection</h3>
+                  <p>Database storage for Tours, Reviews, and Photo records</p>
+                </div>
+                <div class="badge-status-lg" id="mongo-card-badge">Checking...</div>
+              </div>
+
+              <div class="status-card-body">
+                <div class="info-row">
+                  <span class="info-label">Active Connection String:</span>
+                  <code class="info-code" id="mongo-uri-display">mongodb://127.0.0.1:27017/ladakh_wayfarers</code>
+                </div>
+                <div class="info-row" id="mongo-detail-msg">
+                  <span class="info-label">Connection State:</span>
+                  <span class="info-value" id="mongo-status-text">Detecting status...</span>
+                </div>
+
+                <div class="setup-guide">
+                  <h4><i class="fa-solid fa-circle-info"></i> How to connect MongoDB Atlas (Cloud) or Local MongoDB:</h4>
+                  <ol>
+                    <li>Open <code>.env</code> in this project directory.</li>
+                    <li>For <strong>MongoDB Atlas (Cloud)</strong>, set:
+                      <pre>MONGODB_URI=mongodb+srv://&lt;username&gt;:&lt;password&gt;@cluster0.xxxxx.mongodb.net/ladakh_wayfarers?retryWrites=true&w=majority</pre>
+                    </li>
+                    <li>For <strong>Local MongoDB</strong>, ensure <code>mongod</code> service is started:
+                      <pre>MONGODB_URI=mongodb://127.0.0.1:27017/ladakh_wayfarers</pre>
+                    </li>
+                    <li>Save <code>.env</code> and restart with <code>npm start</code> or <code>npm run dev</code>.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cloudinary Status Card -->
+            <div class="status-card">
+              <div class="status-card-header">
+                <div class="status-icon-box cloud">
+                  <i class="fa-solid fa-cloud"></i>
+                </div>
+                <div>
+                  <h3>Cloudinary CDN & Media Storage</h3>
+                  <p>Automatic high-performance cloud image uploads and transformations</p>
+                </div>
+                <div class="badge-status-lg" id="cloud-card-badge">Checking...</div>
+              </div>
+
+              <div class="status-card-body">
+                <div class="info-row">
+                  <span class="info-label">Cloud Name:</span>
+                  <code class="info-code" id="cloud-name-display">Not configured</code>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Upload Mode:</span>
+                  <span class="info-value" id="cloud-mode-text">Local file storage (fallback)</span>
+                </div>
+
+                <div class="setup-guide">
+                  <h4><i class="fa-solid fa-bolt"></i> How to activate Cloudinary Image Hosting (Free):</h4>
+                  <ol>
+                    <li>Sign up for a free account at <a href="https://cloudinary.com" target="_blank" rel="noopener noreferrer">cloudinary.com</a>.</li>
+                    <li>Copy your <strong>Cloud Name</strong>, <strong>API Key</strong>, and <strong>API Secret</strong> from your Cloudinary Dashboard.</li>
+                    <li>Add them to your <code>.env</code> file:
+                      <pre>CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret</pre>
+                    </li>
+                    <li>Restart the server. All photo uploads will instantly host on Cloudinary CDN!</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: ADD / EDIT TOUR -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="tour-modal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3 id="tour-modal-title"><i class="fa-solid fa-route"></i> Add New Tour Package</h3>
+        <button class="modal-close-btn" data-close="tour-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="tour-form" class="modal-form">
+        <input type="hidden" id="tour-is-edit" value="false">
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="tour-id">Tour ID (Unique Slug) <span class="required">*</span></label>
+            <input type="text" id="tour-id" placeholder="e.g. tour-5-days-leh" required>
+          </div>
+          <div class="form-group">
+            <label for="tour-badge">Badge / Ribbon (Optional)</label>
+            <input type="text" id="tour-badge" placeholder="e.g. Family Favorite, Bestseller">
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="tour-title">Tour Title <span class="required">*</span></label>
+            <input type="text" id="tour-title" placeholder="e.g. 5 Days Classic Leh & Sham Valley Explorer" required>
+          </div>
+
+          <div class="form-group">
+            <label for="tour-duration">Duration</label>
+            <input type="text" id="tour-duration" placeholder="e.g. 5 Days / 4 Nights">
+          </div>
+          <div class="form-group">
+            <label for="tour-maxAltitude">Max Altitude</label>
+            <input type="text" id="tour-maxAltitude" placeholder="e.g. 17,982 ft (Khardung La)">
+          </div>
+
+          <div class="form-group">
+            <label for="tour-difficulty">Difficulty</label>
+            <select id="tour-difficulty">
+              <option value="Easy">Easy</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Challenging">Challenging</option>
+              <option value="Extreme">Extreme</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="tour-category">Category</label>
+            <select id="tour-category">
+              <option value="Classic">Classic</option>
+              <option value="Adventure">Adventure</option>
+              <option value="Cultural">Cultural</option>
+              <option value="Photography">Photography</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="tour-priceEstimate">Price Estimate</label>
+            <input type="text" id="tour-priceEstimate" placeholder="e.g. ₹18,500 - ₹24,000">
+          </div>
+          <div class="form-group">
+            <label for="tour-idealVehicle">Ideal Vehicle</label>
+            <input type="text" id="tour-idealVehicle" value="Toyota Innova Crysta">
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="tour-bestSeason">Best Season</label>
+            <input type="text" id="tour-bestSeason" placeholder="e.g. May to October (Available Year-Round)">
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="tour-overview">Tour Overview</label>
+            <textarea id="tour-overview" rows="3" placeholder="Provide a detailed journey summary..."></textarea>
+          </div>
+
+          <!-- Dynamic Highlights Builder -->
+          <div class="form-group form-col-span-2">
+            <div class="label-with-action">
+              <label>Tour Highlights</label>
+              <button type="button" class="btn-text-action" id="btn-add-highlight">
+                <i class="fa-solid fa-plus"></i> Add Highlight
+              </button>
+            </div>
+            <div id="tour-highlights-builder" class="dynamic-inputs-col"></div>
+          </div>
+
+          <!-- Dynamic Itinerary Builder -->
+          <div class="form-group form-col-span-2">
+            <div class="label-with-action">
+              <label>Day-by-Day Itinerary</label>
+              <button type="button" class="btn-text-action" id="btn-add-itinerary-day">
+                <i class="fa-solid fa-plus"></i> Add Day
+              </button>
+            </div>
+            <div id="tour-itinerary-builder" class="dynamic-itinerary-list"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="tour-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-tour">
+            <i class="fa-solid fa-check"></i>
+            <span>Save Tour</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: ADD / EDIT REVIEW -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="review-modal-title"><i class="fa-solid fa-star"></i> Add Customer Review</h3>
+        <button class="modal-close-btn" data-close="review-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="review-form" class="modal-form">
+        <input type="hidden" id="review-is-edit" value="false">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="rev-id">Review ID <span class="required">*</span></label>
+            <input type="text" id="rev-id" placeholder="e.g. rev_01" required>
+          </div>
+          <div class="form-group">
+            <label for="rev-rating">Star Rating (1 - 5)</label>
+            <div class="star-rating-selector" id="rev-rating-stars">
+              <button type="button" data-val="1"><i class="fa-solid fa-star"></i></button>
+              <button type="button" data-val="2"><i class="fa-solid fa-star"></i></button>
+              <button type="button" data-val="3"><i class="fa-solid fa-star"></i></button>
+              <button type="button" data-val="4"><i class="fa-solid fa-star"></i></button>
+              <button type="button" class="active" data-val="5"><i class="fa-solid fa-star"></i></button>
+            </div>
+            <input type="hidden" id="rev-rating" value="5">
+          </div>
+
+          <div class="form-group">
+            <label for="rev-name">Traveler Name <span class="required">*</span></label>
+            <input type="text" id="rev-name" placeholder="e.g. Ananya & Rahul Sharma" required>
+          </div>
+          <div class="form-group">
+            <label for="rev-email">Email Address</label>
+            <input type="email" id="rev-email" placeholder="e.g. ananya@gmail.com">
+          </div>
+
+          <div class="form-group">
+            <label for="rev-origin">Traveler Origin</label>
+            <input type="text" id="rev-origin" placeholder="e.g. Mumbai, Maharashtra">
+          </div>
+          <div class="form-group">
+            <label for="rev-date">Travel Date</label>
+            <input type="date" id="rev-date">
+          </div>
+
+          <div class="form-group">
+            <label for="rev-route">Route / Circuit</label>
+            <input type="text" id="rev-route" placeholder="e.g. 7 Days Nubra, Pangong & Hanle Circuit">
+          </div>
+          <div class="form-group">
+            <label for="rev-vehicle">Vehicle Used</label>
+            <input type="text" id="rev-vehicle" value="Toyota Innova Crysta">
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="rev-review">Customer Review Text <span class="required">*</span></label>
+            <textarea id="rev-review" rows="4" placeholder="Review feedback..." required></textarea>
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="rev-driverReply">Driver's Reply (Julley greeting)</label>
+            <textarea id="rev-driverReply" rows="2" placeholder="e.g. Julley Ananya ji! It was an absolute pleasure hosting you..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="rev-helpfulCount">Helpful Votes Count</label>
+            <input type="number" id="rev-helpfulCount" value="0" min="0">
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="rev-verified" checked>
+              <span class="checkmark"></span>
+              <span>Verified Traveler</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="review-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-review">
+            <i class="fa-solid fa-check"></i>
+            <span>Save Review</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: ADD / EDIT GALLERY PHOTO & CLOUDINARY UPLOAD -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="gallery-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="gallery-modal-title"><i class="fa-solid fa-cloud-arrow-up"></i> Upload & Add Photo / Video</h3>
+        <button class="modal-close-btn" data-close="gallery-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="gallery-form" class="modal-form">
+        <input type="hidden" id="gal-is-edit" value="false">
+
+        <!-- Cloudinary Drag & Drop Uploader -->
+        <div class="dropzone-box" id="gallery-dropzone">
+          <input type="file" id="gal-file-input" accept="image/*,video/*" class="file-hidden-input">
+          <div class="dropzone-content" id="dropzone-default-view">
+            <div class="dropzone-icon">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <h4>Drag & drop photo or video, or <span class="browse-link">browse files</span></h4>
+            <p>Direct upload to Cloudinary (PNG, JPG, WEBP, MP4, MOV, WEBM up to 100MB)</p>
+          </div>
+
+          <!-- Upload Progress & Preview View -->
+          <div class="dropzone-preview" id="dropzone-preview-view" style="display: none;">
+            <img id="preview-image-elem" src="" alt="Preview" style="display: none;">
+            <video id="preview-video-elem" src="" controls autoplay muted loop playsinline style="display: none; width: 74px; height: 74px; border-radius: var(--radius-md); object-fit: cover; border: 1px solid var(--border-medium);"></video>
+            <div class="preview-meta">
+              <span id="preview-filename">media.jpg</span>
+              <div class="upload-progress-bar-wrap">
+                <div class="upload-progress-bar" id="upload-progress-fill"></div>
+              </div>
+              <span id="upload-status-text">Uploading to Cloudinary...</span>
+            </div>
+            <button type="button" class="btn-icon-danger" id="btn-clear-preview" title="Remove media">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="gal-id">Media ID <span class="required">*</span></label>
+            <input type="text" id="gal-id" placeholder="e.g. gal-01" required>
+          </div>
+          <div class="form-group">
+            <label for="gal-mediaType">Media Type</label>
+            <select id="gal-mediaType">
+              <option value="image">Image / Photo</option>
+              <option value="video">Video / Reel</option>
+            </select>
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="gal-category">Category</label>
+            <select id="gal-category">
+              <option value="lakes">Lakes (Pangong, Tso Moriri)</option>
+              <option value="passes">Passes (Khardung La, Chang La)</option>
+              <option value="monasteries">Monasteries & Palaces</option>
+              <option value="vehicles">Vehicles & Mountain Rides</option>
+              <option value="culture">Culture & Local Life</option>
+              <option value="videos">Videos & Expedition Reels</option>
+            </select>
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="gal-title">Photo / Video Title <span class="required">*</span></label>
+            <input type="text" id="gal-title" placeholder="e.g. Toyota Innova Crysta at Pangong Tso" required>
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="gal-image">Media URL (Cloudinary or Direct URL) <span class="required">*</span></label>
+            <input type="url" id="gal-image" placeholder="https://res.cloudinary.com/... or uploaded link" required>
+            <input type="hidden" id="gal-publicId">
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="gal-location">Location</label>
+            <input type="text" id="gal-location" placeholder="e.g. Pangong Tso Lake, Changthang">
+          </div>
+
+          <div class="form-group form-col-span-2">
+            <label for="gal-caption">Caption</label>
+            <textarea id="gal-caption" rows="2" placeholder="Describe the photo scene..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="gallery-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-gallery">
+            <i class="fa-solid fa-check"></i>
+            <span>Save to Gallery</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CHANGE ADMIN PASSWORD -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="change-password-modal">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-key"></i> Change Admin Password</h3>
+        <button class="modal-close-btn" data-close="change-password-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="change-password-form">
+        <div class="modal-body-p">
+          <div id="change-pwd-alert" class="login-alert hidden" style="margin-bottom: 1.25rem;"></div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="pwd-current">Current Password <span class="required">*</span></label>
+            <input type="password" id="pwd-current" class="form-input" placeholder="Enter current admin password" required autocomplete="current-password">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="pwd-new">New Password <span class="required">*</span></label>
+            <input type="password" id="pwd-new" class="form-input" placeholder="Minimum 6 characters" required minlength="6" autocomplete="new-password">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="pwd-confirm">Confirm New Password <span class="required">*</span></label>
+            <input type="password" id="pwd-confirm" class="form-input" placeholder="Re-type new password" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="change-password-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-change-pwd">
+            <i class="fa-solid fa-check"></i>
+            <span>Update Password</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CONFIRM DELETE -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3 class="danger-title"><i class="fa-solid fa-triangle-exclamation"></i> Confirm Deletion</h3>
+        <button class="modal-close-btn" data-close="delete-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body-p">
+        <p>Are you sure you want to delete <strong id="delete-item-title">this item</strong> from the database?</p>
+        <p class="muted-note">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close="delete-modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete">
+          <i class="fa-solid fa-trash"></i>
+          <span>Delete Permanently</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vanilla JS Application -->
+  <script src="js/app.js?v=3"></script>
+</body>
+</html>
