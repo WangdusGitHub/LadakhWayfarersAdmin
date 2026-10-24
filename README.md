@@ -174,4 +174,5 @@ Open your browser to:
 | `PUT` | `/api/driver-config` | Admin | Update chauffeur profile & vehicle specs |
 | `DELETE` | `/api/driver-config/profile-image` | Admin | Delete profile photo & destroy Cloudinary asset |
 #   L a d a k h W a y f a r e r s A d m i n  
+ #   L a d a k h W a y f a r e r s A d m i n  
  
